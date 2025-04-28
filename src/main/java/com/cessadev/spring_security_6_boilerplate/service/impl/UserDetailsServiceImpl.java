@@ -16,6 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Servicio que carga los detalles del usuario desde la base de datos.
+ *
+ * Implementa la interfaz UserDetailsService de Spring Security para integrarse
+ * con el proceso de autenticación e implementa la interfaz IUserDetailsService
+ * crear un contrato con métodos definido.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,13 @@ public class UserDetailsServiceImpl implements UserDetailsService, IUserDetailsS
 
   private final UserRepository userRepository;
 
+  /**
+   * Carga un usuario por su email y construye el UserDetails
+   *
+   * @param email Email del usuario a buscar
+   * @return CustomUserDetails con la información del usuario
+   * @throws UsernameNotFoundException Si el usuario no existe o está deshabilitado
+   */
   @Override
   public CustomUserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
     log.debug("Loading user by email: {}", email);

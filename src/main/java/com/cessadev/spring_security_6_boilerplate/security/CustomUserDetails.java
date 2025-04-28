@@ -9,13 +9,36 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Implementación personalizada de UserDetails que envuelve la entidad User.
+ *
+ * Proporciona la adaptación entre la entidad User del dominio y los requerimientos
+ * de Spring Security para la autenticación.
+ */
 @Getter
 public class CustomUserDetails implements UserDetails {
 
+  /**
+   * Entidad User del dominio
+   */
   private final User user;
+
+  /**
+   * Lista de roles como Strings
+   */
   private final List<String> roles;
+
+  /**
+   * Colección de autoridades para Spring Security
+   */
   private final Collection<? extends GrantedAuthority> authorities;
 
+  /**
+   * Constructor principal
+   *
+   * @param user Entidad User del dominio
+   * @param roles Lista de nombres de roles (ej. ["ROLE_ADMIN", "ROLE_USER", "ROLE_INVITED"])
+   */
   public CustomUserDetails(User user, List<String> roles) {
     this.user = user;
     this.roles = roles;

@@ -15,21 +15,60 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Clase utilitaria para manejo de tokens JWT (JSON Web Tokens).
+ *
+ * Proporciona funcionalidades para:
+ * <ul>
+ *   <li>Generación de tokens JWT</li>
+ *   <li>Validación de tokens</li>
+ *   <li>Extracción de información de tokens</li>
+ * </ul>
+ *
+ * Configuración requerida en application.properties:
+ * <pre>
+ * jwt.secret.key=clave-secreta-en-base64
+ * jwt.expiration.time=86400000 # 24 horas en milisegundos
+ * jwt.issuer=nombre-de-tu-aplicacion
+ * </pre>
+ */
 @Slf4j
 @Component
 public class JwtUtils {
 
+  /**
+   * Clave secreta para firmar los tokens (en formato Base64)
+   */
   @Value("${jwt.secret.key}")
   private String secretKey;
 
+  /**
+   * Tiempo de expiración de los tokens en milisegundos
+   */
   @Value("${jwt.expiration.time}")
   private Long expirationTime;
 
+  /**
+   * Emisor del token (normalmente el nombre de la aplicación)
+   */
   @Value("${jwt.issuer}")
   private String issuer;
 
-  private transient SecretKey cachedSigningKey; // Transient para serialización
+  /**
+   * Transient para serialización
+   * Cache de la clave de firma para mejor rendimiento
+   */
+  private transient SecretKey cachedSigningKey;
 
+  /**
+   * Genera un token JWT para un usuario autenticado
+   *
+   * @param userDetails Detalles del usuario autenticado
+   * @return Token JWT firmado que contiene:
+   *         - username como subject
+   *         - authorities como claim
+   *         - issuer, fecha emisión y expiración
+   */
   public String generateAccessToken(UserDetails userDetails) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("authorities", userDetails.getAuthorities().stream()
@@ -39,6 +78,13 @@ public class JwtUtils {
     return buildToken(claims, userDetails.getUsername());
   }
 
+  /**
+   * Genera un token JWT con autoridades específicas
+   *
+   * @param username    Nombre de usuario (subject del token)
+   * @param authorities Colección de autoridades/roles
+   * @return Token JWT firmado
+   */
   public String generateAccessToken(String username, Collection<? extends GrantedAuthority> authorities) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("authorities", authorities.stream()
@@ -48,6 +94,13 @@ public class JwtUtils {
     return buildToken(claims, username);
   }
 
+  /**
+   * Construye el token JWT con los claims proporcionados
+   *
+   * @param claims  Información adicional a incluir en el token
+   * @param subject Subject del token (normalmente el username)
+   * @return Token JWT firmado
+   */
   private String buildToken(Map<String, Object> claims, String subject) {
     return Jwts.builder()
             .claims(claims)
@@ -59,6 +112,12 @@ public class JwtUtils {
             .compact();
   }
 
+  /**
+   * Verifica si un token JWT es válido
+   *
+   * @param token Token a validar
+   * @return true si el token es válido (firma correcta, no expirado, formato válido)
+   */
   public boolean isValidToken(String token) {
     try {
       Jwts.parser()
@@ -82,6 +141,13 @@ public class JwtUtils {
     return false;
   }
 
+  /**
+   * Extrae todos los claims (información contenida) de un token
+   *
+   * @param token Token JWT
+   * @return Objeto Claims con toda la información del token
+   * @throws JwtException Si el token es inválido
+   */
   public Claims extractAllClaims(String token) {
     return Jwts.parser()
             .verifyWith(getSigningKey())
@@ -90,15 +156,35 @@ public class JwtUtils {
             .getPayload();
   }
 
+  /**
+   * Obtiene un claim específico del token
+   *
+   * @param token          Token JWT
+   * @param claimsResolver Función para extraer el claim deseado
+   * @param <T>            Tipo del claim a retornar
+   * @return Valor del claim solicitado
+   */
   public <T> T getClaim(String token, Function<Claims, T> claimsResolver) {
     final Claims claims = extractAllClaims(token);
     return claimsResolver.apply(claims);
   }
 
+  /**
+   * Obtiene el nombre de usuario (subject) del token
+   *
+   * @param token Token JWT
+   * @return Nombre de usuario contenido en el token
+   */
   public String getUsernameFromToken(String token) {
     return getClaim(token, Claims::getSubject);
   }
 
+  /**
+   * Obtiene los roles/autoridades del token
+   *
+   * @param token Token JWT
+   * @return Lista de roles/autoridades
+   */
   @SuppressWarnings("unchecked")
   public List<String> getRolesFromToken(String token) {
     List<?> roles = Collections.singletonList(getClaim(token, claims -> claims.get("authorities")));
@@ -109,6 +195,12 @@ public class JwtUtils {
             .toList();
   }
 
+  /**
+   * Obtiene la fecha de expiración del token
+   *
+   * @param token Token JWT
+   * @return Fecha de expiración
+   */
   public Date getExpirationDateFromToken(String token) {
     return getClaim(token, Claims::getExpiration);
   }
@@ -121,10 +213,21 @@ public class JwtUtils {
     return cachedSigningKey;
   }
 
+  /**
+   * Verifica el tiempo de expiración definido
+   *
+   * @return el tiempo de expiración en milisegundos
+   */
   public long getExpirationTime() {
     return expirationTime;
   }
 
+  /**
+   * Verifica si el token ha expirado
+   *
+   * @param token Token JWT
+   * @return true si el token está expirado, false si aún es válido
+   */
   public boolean isTokenExpired(String token) {
     final Date expiration = getExpirationDateFromToken(token);
     return expiration.before(new Date());

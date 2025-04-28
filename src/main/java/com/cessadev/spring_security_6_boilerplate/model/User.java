@@ -1,5 +1,6 @@
 package com.cessadev.spring_security_6_boilerplate.model;
 
+import jakarta.persistence.Entity;
 import lombok.*;
 
 import java.util.Objects;
@@ -10,6 +11,7 @@ import java.util.Set;
 @ToString(exclude = "password")
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
 public class User {
 
   private Long id;

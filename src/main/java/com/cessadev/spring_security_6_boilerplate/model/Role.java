@@ -1,6 +1,7 @@
 package com.cessadev.spring_security_6_boilerplate.model;
 
 import com.cessadev.spring_security_6_boilerplate.model.enums.ERoles;
+import jakarta.persistence.Entity;
 import lombok.*;
 
 import java.util.Objects;
@@ -10,6 +11,7 @@ import java.util.Objects;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
 public class Role {
 
   private Long id;

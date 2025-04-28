@@ -21,6 +21,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Filtro que verifica y valida tokens JWT en las solicitudes.
+ * <p>
+ * Este filtro se ejecuta en cada request y verifica:
+ * <ul>
+ *   <li>Presencia del header Authorization</li>
+ *   <li>Formato correcto del token (Bearer)</li>
+ *   <li>Validez del token JWT</li>
+ *   <li>Correspondencia entre el token y el usuario</li>
+ * </ul>
+ * <p>
+ * Si la validación es exitosa, establece la autenticación en el SecurityContext.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -33,6 +46,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
   private final UserDetailsServiceImpl userDetailsService;
   private final ObjectMapper objectMapper;
 
+  /**
+   * Método principal que procesa cada request
+   */
   @Override
   protected void doFilterInternal(@NonNull HttpServletRequest request,
                                   @NonNull HttpServletResponse response,
@@ -45,11 +61,14 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     }
   }
 
+  /**
+   * Procesa el token de autenticación del header
+   */
   private void processTokenAuthentication(HttpServletRequest request) {
     String authHeader = request.getHeader(AUTH_HEADER);
 
     if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-      return;
+      return; // No hay token, sigue la cadena de filtros
     }
 
     if (SecurityContextHolder.getContext().getAuthentication() != null) {
@@ -61,6 +80,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     authenticateWithToken(token);
   }
 
+  /**
+   * Autentica al usuario usando el token JWT
+   */
   private void authenticateWithToken(String token) {
     if (!jwtUtils.isValidToken(token)) {
       throw new JwtAuthenticationException("Invalid JWT token");
@@ -73,7 +95,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
             userDetails,
-            null,
+            null, // Credenciales (no necesarias después de autenticado)
             userDetails.getAuthorities()
     );
 
@@ -81,12 +103,18 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     log.debug("Authenticated user: {}", username);
   }
 
+  /**
+   * Valida que el token corresponda al usuario
+   */
   private void validateTokenMatchesUser(String token, UserDetails userDetails) {
     if (!jwtUtils.getUsernameFromToken(token).equals(userDetails.getUsername())) {
       throw new JwtAuthenticationException("Token does not match user credentials");
     }
   }
 
+  /**
+   * Maneja errores de autenticación
+   */
   private void handleAuthenticationError(HttpServletResponse response, Exception ex) throws IOException {
     log.error("JWT Authentication error: {}", ex.getMessage());
 
@@ -102,6 +130,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     objectMapper.writeValue(response.getWriter(), errorDetails);
   }
 
+  /**
+   * Determina la razón del error para la respuesta
+   */
   private String resolveErrorReason(Exception ex) {
     if (ex instanceof UsernameNotFoundException) {
       return "user-not-found";
@@ -112,6 +143,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     return "authentication-failed";
   }
 
+  /**
+   * Excepción personalizada para errores JWT
+   */
   private static class JwtAuthenticationException extends RuntimeException {
     public JwtAuthenticationException(String message) {
       super(message);

@@ -33,6 +33,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Configuración principal de seguridad para la aplicación.
+ * <p>
+ * Esta clase define:
+ * <ul>
+ *   <li>La cadena de filtros de seguridad</li>
+ *   <li>Configuración de autenticación</li>
+ *   <li>Políticas de CORS</li>
+ *   <li>Manejo de excepciones</li>
+ *   <li>Configuración de sesiones</li>
+ * </ul>
+ */
 @Slf4j
 @Configuration
 @EnableWebSecurity
@@ -46,6 +58,12 @@ public class SecurityConfig {
   private final Environment env; // Maneja perfiles
   private final ObjectMapper objectMapper;
 
+  /**
+   * Configura la cadena principal de filtros de seguridad
+   *
+   * @param http Configuración de seguridad HTTP
+   * @return SecurityFilterChain configurado
+   */
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
@@ -56,34 +74,40 @@ public class SecurityConfig {
     jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
     return http
-            .cors(Customizer.withDefaults())
-            .csrf(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults()) // Habilita CORS con configuración personaliza
+            .csrf(AbstractHttpConfigurer::disable) // Deshabilita CSRF para APIs stateless
             .authorizeHttpRequests(auth -> {
               // Endpoints públicos
               auth.requestMatchers(
-                      "/api/auth/**",
-                      "/v3/api-docs/**",
-                      "/swagger-ui/**",
-                      "/swagger-ui.html"
+                      "/api/auth/**", // Endpoints de autenticación
+                      "/v3/api-docs/**", // Documentación OpenAPI
+                      "/swagger-ui/**", // UI de Swagger
+                      "/swagger-ui.html" // HTML de Swagger
               ).permitAll();
 
-              // Endpoints que requieren autenticación
+              // El resto de Endpoints requieren autenticación
               auth.anyRequest().authenticated();
             })
             .sessionManagement(session ->
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // API sin estado
             .exceptionHandling(ex ->
-                    ex.authenticationEntryPoint(authenticationEntryPoint()))
-            .addFilter(jwtAuthenticationFilter)
-            .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)
+                    ex.authenticationEntryPoint(authenticationEntryPoint())) // Manejo de errores
+            .addFilter(jwtAuthenticationFilter) // Filtro de autenticación JWT
+            .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class) // Filtro de autorización
             .build();
   }
 
+  /**
+   * Configura el codificador de contraseñas (BCrypt)
+   */
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
 
+  /**
+   * Configura el AuthenticationManager
+   */
   @Bean
   AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
     AuthenticationManagerBuilder authenticationManagerBuilder =
@@ -94,6 +118,9 @@ public class SecurityConfig {
     return authenticationManagerBuilder.build();
   }
 
+  /**
+   * Configura el manejo de errores de autenticación
+   */
   @Bean
   AuthenticationEntryPoint authenticationEntryPoint() {
     return (request, response, authException) -> {
@@ -109,6 +136,9 @@ public class SecurityConfig {
     };
   }
 
+  /**
+   * Configuración de CORS (Cross-Origin Resource Sharing)
+   */
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
